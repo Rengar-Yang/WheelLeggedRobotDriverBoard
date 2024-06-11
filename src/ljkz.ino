@@ -1,12 +1,21 @@
 #include <SimpleFOC.h>
+#include "BluetoothSerial.h"
 
 #define RXD1 18
 #define TXD1 23
 
 unsigned long now_us = 0;
 unsigned long now_us1 = 0;
+////////////////////////蓝牙主机连接从机///////////////////
+BluetoothSerial SerialBT;
+const char* deviceName = "HC-05";  // 要连接的设备名称
+// RxPack rxpack;
+// unsigned char buffer[50];
+// extern unsigned char vp_rxbuff[VALUEPACK_BUFFER_SIZE];
+// extern long rxIndex;
+//////////////////////////////////////////////////////
 
-////////////////////////////双板通信////////////////////////////////
+////////////////////////////双板通信/////////////////////////////////
 unsigned char recstatu = 0;//表示是否处于一个正在接收数据包的状态
 unsigned char ccnt = 0;//计数
 uint8_t RxIndex = 8;//接收数据包字节数
@@ -15,7 +24,7 @@ unsigned char packerflag = 0;//是否接收到一个完整的数据包标志
 unsigned char rxbuf[8] = {0,0,0,0,0,0,0,0};//接收数据的缓冲区
 unsigned char txbuf[8] = {0,0,0,0,0,0,0,0};
 unsigned char dat = 0;
-///////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
 
 
 float Amotor_speed = 0;   //A电机当前速度
@@ -58,6 +67,12 @@ void setup() {
   //initialise magnetic sensor1 hardware
   sensor1.init(hspi);  
   sensor2.init(hspi);  
+
+  // hw_timer_t *timer1 = timerBegin(1, 80, true);    //启动定时器
+  // timerAttachInterrupt(timer1, &TIME_INTERRUPT_2, true);
+  // timerAlarmWrite(timer1, 1000, true);
+  // timerAlarmEnable(timer1);
+////////////////////////////////////////////////////////////////////////
 
   //I2Cone.begin(12, 13, 400000);
   //I2Ctwo.begin(14, 15, 400000);   //SDA1,SCL1
@@ -135,6 +150,22 @@ motor2.foc_modulation = FOCModulationType::SpaceVectorPWM;
   Serial.println(F("Motor ready."));
   Serial.println(F("Set the target angle using serial terminal:"));
   _delay(1000);
+
+   ////////////////////////蓝牙主机连接从机///////////////////////////////////
+  SerialBT.begin("Motor_Driver",true); //Bluetooth device name
+  Serial.println("The device started, now you can pair it with bluetooth!");
+  // 尝试连接到指定设备
+  bool connected = false;
+  while (!connected) {
+    if (SerialBT.connect(deviceName)) {
+      Serial.println("Connected to " + String(deviceName));
+      connected = true;
+    } else {
+      Serial.println("Failed to connect. Trying again...");
+      delay(1000);  // 重试前的延迟
+    }
+  }
+
 }
 
 void loop() {  
