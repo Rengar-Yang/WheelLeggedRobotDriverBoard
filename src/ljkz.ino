@@ -8,7 +8,7 @@ unsigned long now_us = 0;
 unsigned long now_us1 = 0;
 ////////////////////////蓝牙主机连接从机///////////////////
 BluetoothSerial SerialBT;
-const char* deviceName = "HC-05";  // 要连接的设备名称
+const char* deviceName = "Head_Driver";  // 要连接的设备名称
 // RxPack rxpack;
 // unsigned char buffer[50];
 // extern unsigned char vp_rxbuff[VALUEPACK_BUFFER_SIZE];
@@ -18,27 +18,27 @@ const char* deviceName = "HC-05";  // 要连接的设备名称
 ////////////////////////////双板通信/////////////////////////////////
 unsigned char recstatu = 0;//表示是否处于一个正在接收数据包的状态
 unsigned char ccnt = 0;//计数
-uint8_t RxIndex = 9;//接收数据包字节数
-uint8_t TxIndex = 9;//发送数据包字节数
+uint8_t RxIndex = 12;//接收数据包字节数
+uint8_t TxIndex = 12;//发送数据包字节数
 unsigned char packerflag = 0;//是否接收到一个完整的数据包标志
-unsigned char rxbuf[9] = {0,0,0,0,0,0,0,0,0};//接收数据的缓冲区
-unsigned char txbuf[9] = {0,0,0,0,0,0,0,0,0};
+unsigned char rxbuf[12] = {0,0,0,0,0,0,0,0,0,0,0,0};//接收数据的缓冲区
+unsigned char txbuf[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
 unsigned char dat = 0;
 ////////////////////////////////////////////////////////////////////
 
 ////////////////////////////双机通信/////////////////////////////////
 unsigned char recstatuBluetooth = 0;//表示是否处于一个正在接收数据包的状态
 unsigned char ccntBluetooth = 0;//计数
-uint8_t RxIndexBluetooth = 9;//接收数据包字节数
-uint8_t TxIndexBluetooth = 9;//发送数据包字节数
-uint8_t TryTime = 3;//尝试连接次数
+uint8_t RxIndexBluetooth = 12;//接收数据包字节数
+uint8_t TxIndexBluetooth = 12;//发送数据包字节数
+uint8_t TryTime = 1;//尝试连接次数
 unsigned char packerflagBluetooth = 0;//是否接收到一个完整的数据包标志
-unsigned char rxbufBluetooth[9] = {0,0,0,0,0,0,0,0,0};//接收数据的缓冲区
-unsigned char txbufBluetooth[9] = {0,0,0,0,0,0,0,0,0};
+unsigned char rxbufBluetooth[12] = {0,0,0,0,0,0,0,0,0,0,0,0};//接收数据的缓冲区
+unsigned char txbufBluetooth[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
 unsigned char datBluetooth = 0;
 int CommunicationTime = 0;
-int CommunicationGap = 300;
-unsigned char X_Speed,Y_Speed;
+int CommunicationGap = 50;
+unsigned char X_Speed,Y_Speed,Auto_Aim;
 ////////////////////////////////////////////////////////////////////
 
 float Amotor_speed = 0;   //A电机当前速度
@@ -174,31 +174,39 @@ motor2.foc_modulation = FOCModulationType::SpaceVectorPWM;
       delay(1000);  // 重试前的延迟
     }
   }
+
+////////////////////////WiFi连接////////////////////////////////////////////
+//Wifi接收摄像头数据
+
+///////////////////////////////////////////////////////////////////////////
   // hw_timer_t *timer1 = timerBegin(1, 80, true);    //启动定时器
   // timerAttachInterrupt(timer1, &TIME_INTERRUPT_2, true);
   // timerAlarmWrite(timer1, 1000, true);
   // timerAlarmEnable(timer1);
-  ////////////////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////////////////
 
 }
 
 void loop() {  
   now_us = millis();
 
+  // setAsd=50;
+  // setBsd=50;
+
   motor.loopFOC();
   motor2.loopFOC();
   motor.move(setAsd);
   motor2.move(setBsd);
   
-  Read_serial1(); //串口读数据
+  Read_serial1(); //从计算主控读数据
   if (millis() - CommunicationTime > CommunicationGap)
   {
     CommunicationTime = millis();
-    Send_data_to_Slave(); //向主机发数据
-    //Serial.println(kalmanfilter.angle);
+    Send_data_to_Slave(); //向云台主控发数据
+    // Serial.println(kalmanfilter.angle);
   }
   
-  Read_data_from_Slave(); //串口读数据
+  Read_data_from_Slave(); //从云台主控读数据
 
   if(js>3)
   {
@@ -218,33 +226,38 @@ void loop() {
     
     Read_motor_speed((int)(Amotor_speed*100),(int)(Bmotor_speed*100));
     now_us1 = now_us;
-    //Serial.println(Amotor_speed,3);
+    // Serial.println(Amotor_speed,3);
+    Serial.print(Amotor_angle);
+    Serial.println(Bmotor_angle);
   } 
   
 }
 
-void Send_data_to_Slave()
+void Send_data_to_Slave()// 发送数据给云台主控
 {   
   
   txbufBluetooth[0]=111;
   txbufBluetooth[1]=66;
   txbufBluetooth[2]=rxbuf[6];// X speed
   txbufBluetooth[3]=rxbuf[7];// Y speed
-  txbufBluetooth[4]=0;
+  txbufBluetooth[4]=rxbuf[8];// Auto aim
   txbufBluetooth[5]=0;
   txbufBluetooth[6]=0;
   txbufBluetooth[7]=0;
+  txbufBluetooth[8]=0;
+  txbufBluetooth[9]=0;
+  txbufBluetooth[10]=0;
   txbufBluetooth[TxIndexBluetooth-1]=crc2(txbufBluetooth);
   SerialBT.write(txbufBluetooth,sizeof(txbufBluetooth));
   
 }
 
-void Read_data_from_Slave() //串口读数据
+void Read_data_from_Slave() //读云台数据
 { 
   if (SerialBT.available() > 0) 
   {
      datBluetooth = SerialBT.read();  
-     Serial.print(datBluetooth);  
+     // Serial.print(datBluetooth);  
      if((ccntBluetooth==0)&&(datBluetooth == 111))
      {
        rxbufBluetooth[ccntBluetooth] = datBluetooth;
@@ -268,22 +281,22 @@ void Read_data_from_Slave() //串口读数据
                 packerflagBluetooth = 1;//用于告知系统已经接收成功
                 ccntBluetooth = 0;  
                 
-                Serial.println("Data from slave:");   
-                Serial.print(rxbufBluetooth[0]); 
-                Serial.print(" ");
-                Serial.print(rxbufBluetooth[1]); 
-                Serial.print(" ");
-                Serial.print(rxbufBluetooth[2]); 
-                Serial.print(" ");
-                Serial.print(rxbufBluetooth[3]); 
-                Serial.print(" ");
-                Serial.print(rxbufBluetooth[4]); 
-                Serial.print(" ");
-                Serial.print(rxbufBluetooth[5]); 
-                Serial.print(" ");
-                Serial.print(rxbufBluetooth[6]); 
-                Serial.print(" ");
-                Serial.println(rxbufBluetooth[7]);     
+                // Serial.println("Data from slave:");   
+                // Serial.print(rxbufBluetooth[0]); 
+                // Serial.print(" ");
+                // Serial.print(rxbufBluetooth[1]); 
+                // Serial.print(" ");
+                // Serial.print(rxbufBluetooth[2]); 
+                // Serial.print(" ");
+                // Serial.print(rxbufBluetooth[3]); 
+                // Serial.print(" ");
+                // Serial.print(rxbufBluetooth[4]); 
+                // Serial.print(" ");
+                // Serial.print(rxbufBluetooth[5]); 
+                // Serial.print(" ");
+                // Serial.print(rxbufBluetooth[6]); 
+                // Serial.print(" ");
+                // Serial.println(rxbufBluetooth[7]);     
      
             }
             else
@@ -310,7 +323,7 @@ void Read_data_from_Slave() //串口读数据
   }
 }
 
-void Read_motor_speed(int MA, int MB)
+void Read_motor_speed(int MA, int MB)//给计算主控发数据
 {   
   if(MA>30000)
   MA = 30000;
@@ -331,7 +344,10 @@ void Read_motor_speed(int MA, int MB)
   txbuf[4]=tb>>8;
   txbuf[5]=tb&0xff;
   txbuf[6]=1;
-  txbuf[7]=2;
+  txbuf[7]=0;
+  txbuf[8]=0;
+  txbuf[9]=0;
+  txbuf[10]=0;
   txbuf[TxIndex-1]=crc2(txbuf);
   Serial1.write(txbuf,sizeof(txbuf));
   
@@ -368,7 +384,7 @@ unsigned char crc2(unsigned char buffer[])
   return (unsigned char)crc_bit1;
 }
 
-void Read_serial1() //串口读数据
+void Read_serial1() //从计算主控读数据
 { 
   if (Serial1.available() > 0) 
   {
@@ -404,7 +420,8 @@ void Read_serial1() //串口读数据
                 x2+=rxbuf[5];
       
                 X_Speed = rxbuf[6];
-                X_Speed = rxbuf[7];
+                Y_Speed = rxbuf[7];
+                Auto_Aim = rxbuf[8];
                 setAsd = (x1-32767)*0.01;
                 setBsd = (x2-32767)*0.01;
 
@@ -419,7 +436,9 @@ void Read_serial1() //串口读数据
                 Serial.print(" ");
                 Serial.print(rxbuf[6]); 
                 Serial.print(" ");
-                Serial.println(rxbuf[7]); 
+                Serial.print(rxbuf[7]); 
+                Serial.print(" ");
+                Serial.println(rxbuf[8]); 
                 js = 0;     
      
             }
