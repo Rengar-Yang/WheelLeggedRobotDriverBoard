@@ -160,20 +160,20 @@ motor2.foc_modulation = FOCModulationType::SpaceVectorPWM;
   _delay(1000);
 
    ////////////////////////蓝牙主机连接从机///////////////////////////////////
-  SerialBT.begin("Motor_Driver",true); //Bluetooth device name
-  Serial.println("The device started, now you can pair it with bluetooth!");
-  // 尝试连接到指定设备
-  bool connected = false;
-  while (!connected&&TryTime>0) {
-    if (SerialBT.connect(deviceName)) {
-      Serial.println("Connected to " + String(deviceName));
-      connected = true;
-    } else {
-      Serial.println("Failed to connect. Trying again...");
-      TryTime-=1;
-      delay(1000);  // 重试前的延迟
-    }
-  }
+  // SerialBT.begin("Motor_Driver",true); //Bluetooth device name
+  // Serial.println("The device started, now you can pair it with bluetooth!");
+  // // 尝试连接到指定设备
+  // bool connected = false;
+  // while (!connected&&TryTime>0) {
+  //   if (SerialBT.connect(deviceName)) {
+  //     Serial.println("Connected to " + String(deviceName));
+  //     connected = true;
+  //   } else {
+  //     Serial.println("Failed to connect. Trying again...");
+  //     TryTime-=1;
+  //     delay(1000);  // 重试前的延迟
+  //   }
+  // }
 
 ////////////////////////WiFi连接////////////////////////////////////////////
 //Wifi接收摄像头数据
